@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>會員剩餘課程整理表 - 康博診所</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root{
+    --teal:#0f9e8c;
+    --teal-dark:#085041;
+    --teal-light:#e1f5ee;
+    --gray-900:#2c2c2a;
+    --gray-700:#444441;
+    --gray-500:#888780;
+    --gray-300:#d3d1c7;
+    --gray-100:#f1efe8;
+    --white:#ffffff;
+    --danger:#c0392b;
+    --radius:10px;
+    --border:#e4e2d9;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",-apple-system,BlinkMacSystemFont,sans-serif;
+    background:var(--gray-100);
+    color:var(--gray-900);
+    line-height:1.6;
+  }
+  .wrap{max-width:980px;margin:0 auto;padding:24px 20px 80px;}
+  .topbar{
+    display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;
+    background:var(--white);border:1px solid var(--border);border-radius:var(--radius);
+    padding:16px 20px;margin-bottom:20px;
+  }
+  .brand{display:flex;align-items:center;gap:12px;}
+  .brand img{height:36px;display:block;}
+  .brand .title{font-size:14px;color:var(--gray-500);}
+  .btns{display:flex;gap:8px;flex-wrap:wrap;}
+  button{
+    font-family:inherit;font-size:13px;color:var(--gray-900);
+    background:var(--white);border:1px solid var(--gray-300);border-radius:8px;
+    padding:8px 14px;cursor:pointer;transition:background .15s;
+  }
+  button:hover{background:var(--gray-100);}
+  button.primary{background:var(--teal);border-color:var(--teal);color:var(--white);}
+  button.primary:hover{background:var(--teal-dark);}
+  button.danger{color:var(--danger);border-color:var(--danger);}
+  button.small{font-size:12px;padding:4px 10px;}
+  input[type=text],input[type=password],input[type=number]{
+    font-family:inherit;font-size:13px;padding:6px 10px;border:1px solid var(--gray-300);
+    border-radius:6px;color:var(--gray-900);background:var(--white);
+  }
+  #fileInput{display:none;}
+  .customer-card{
+    background:var(--white);border:1px solid var(--border);border-radius:var(--radius);
+    padding:14px 20px;margin-bottom:24px;display:flex;gap:36px;flex-wrap:wrap;
+  }
+  .customer-card .field .label{font-size:12px;color:var(--gray-500);margin-bottom:2px;}
+  .customer-card .field .value{font-size:16px;font-weight:600;}
+  .empty-state{
+    text-align:center;padding:80px 20px;color:var(--gray-500);
+    background:var(--white);border:1px dashed var(--gray-300);border-radius:var(--radius);
+  }
+  .empty-state .big{font-size:16px;color:var(--gray-700);margin-bottom:8px;}
+  .branch-block{margin-bottom:32px;}
+  .branch-title{
+    display:flex;align-items:center;gap:10px;margin-bottom:14px;
+  }
+  .branch-title .bar{width:6px;height:20px;background:var(--teal);border-radius:3px;}
+  .branch-title .name{font-size:17px;font-weight:600;}
+  .branch-title .codes{font-size:12px;color:var(--gray-500);}
+  .sub-section{margin-left:16px;margin-bottom:20px;}
+  .sub-title{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+  .sub-title .label{font-size:14px;font-weight:600;}
+  .sub-title .count{font-size:11px;color:var(--gray-500);background:var(--gray-100);border-radius:6px;padding:1px 8px;}
+  table{width:100%;border-collapse:collapse;font-size:13px;background:var(--white);border:1px solid var(--border);border-radius:8px;overflow:hidden;}
+  table th{
+    text-align:left;font-weight:600;color:var(--gray-500);background:var(--gray-100);
+    padding:8px 10px;border-bottom:1px solid var(--border);cursor:pointer;user-select:none;white-space:nowrap;
+  }
+  table th.sortable:hover{color:var(--teal-dark);}
+  table th .arrow{font-size:10px;margin-left:2px;opacity:.6;}
+  table td{padding:8px 10px;border-bottom:1px solid var(--border);}
+  table tr:last-child td{border-bottom:none;}
+  td.num{text-align:right;font-variant-numeric:tabular-nums;}
+  th.num{text-align:right;}
+  .cat-cards{display:flex;flex-direction:column;gap:10px;}
+  .cat-card{background:var(--white);border:1px solid var(--border);border-radius:12px;padding:12px 16px;break-inside:avoid;}
+  .cat-card-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;}
+  .cat-card-head .cname{font-size:14px;font-weight:600;}
+  .cat-card-head .total{font-size:13px;color:var(--teal-dark);font-weight:600;}
+  table.cat-table{border:none;border-radius:0;margin-top:2px;}
+  table.cat-table th{background:transparent;padding:4px 6px;font-size:11px;color:var(--gray-500);border-bottom:1px solid var(--border);cursor:default;}
+  table.cat-table td{padding:5px 6px;font-size:13px;border-bottom:1px dashed var(--border);color:var(--gray-700);}
+  table.cat-table tr:last-child td{border-bottom:none;}
+  .warn-icon{vertical-align:-2px;margin-right:3px;}
+  .muted-code{color:var(--gray-500);}
+  .toast{
+    position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+    background:var(--gray-900);color:var(--white);padding:10px 20px;border-radius:8px;
+    font-size:13px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:100;
+  }
+  .toast.show{opacity:1;}
+  .modal-overlay{
+    position:fixed;inset:0;background:rgba(44,44,42,.45);display:flex;
+    align-items:flex-start;justify-content:center;overflow-y:auto;z-index:50;padding:40px 16px;
+  }
+  .modal{
+    background:var(--white);border-radius:var(--radius);padding:24px;width:100%;max-width:640px;
+    max-height:calc(100vh - 80px);overflow-y:auto;
+  }
+  .modal h3{margin:0 0 16px;font-size:16px;}
+  .modal .row{display:flex;gap:8px;margin-bottom:10px;align-items:center;}
+  .modal .close-row{display:flex;justify-content:flex-end;gap:8px;margin-top:16px;position:sticky;bottom:0;background:var(--white);padding-top:12px;}
+  .edit-cat{border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:10px;}
+  .edit-cat-head{display:flex;gap:8px;align-items:center;margin-bottom:8px;}
+  .edit-cat-head input[type=text]{flex:1;font-weight:600;}
+  .edit-item-row{display:flex;gap:6px;align-items:center;font-size:12px;padding:3px 0;color:var(--gray-700);}
+  .edit-item-row .code{width:80px;color:var(--gray-500);font-variant-numeric:tabular-nums;}
+  .edit-item-row .name{flex:1;}
+  .add-item-row{display:flex;gap:6px;margin-top:6px;}
+  .add-item-row input{font-size:12px;padding:4px 8px;}
+  .add-item-row input.code-input{width:90px;}
+  .hint{font-size:12px;color:var(--gray-500);margin-top:4px;}
+  @media print{
+    body{background:var(--white);}
+    .no-print{display:none !important;}
+    .wrap{max-width:100%;padding:0;}
+    .branch-block{page-break-inside:avoid;}
+    .cat-card{border:1px solid #ccc;}
+    table{border:1px solid #ccc;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar no-print">
+    <div class="brand">
+      <img src="data:image/png;base64,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" alt="康博診所">
+      <div class="title">會員剩餘課程整理表</div>
+    </div>
+    <div class="btns">
+      <button onclick="document.getElementById('fileInput').click()">匯入殘值表</button>
+      <input type="file" id="fileInput" accept=".xls,.xlsx" onchange="handleFileUpload(event)">
+      <button onclick="openEditGate()">編輯對照資料庫</button>
+      <button class="primary" onclick="window.print()">匯出 PDF</button>
+    </div>
+  </div>
+
+  <div id="content"></div>
+</div>
+
+<div class="toast no-print" id="toast"></div>
+<div id="modalRoot"></div>
+
+<script>
+const DEFAULT_DB = [{"category": "AMP", "items": [{"code": "2120002", "name": "AMP術後專用修護課程($3200)"}, {"code": "2220013", "name": "票券用-AMP術後專用修護課程($3200)"}, {"code": "2230006", "name": "12周年年卡-AMP術後專用修護課程($3200)"}, {"code": "2230088", "name": "2023母親節-AMP術後專用修護課程($3200)"}, {"code": "2270007", "name": "AMP術後專用修護課程：11堂 /12000"}, {"code": "2270023", "name": "12周年年卡-AMP術後專用修護課程($3200)"}, {"code": "2770007", "name": "AMP術後專用修護課程(Free)"}, {"code": "2770017", "name": "(10mins)AMP術後專用修護課程(Free)"}]}, {"category": "FA", "items": [{"code": "2120001", "name": "FA極緻臉部保養課程($3500)"}, {"code": "2120025", "name": "法布甜中秋方案B-FA全方位臉部"}, {"code": "2120027", "name": "2022金虎吉祥戳戳樂-FA極緻臉部保養課程($3500)"}, {"code": "2120035", "name": "2022法布甜中秋刮刮樂B-FA全方位臉部"}, {"code": "2120037", "name": "2023法布甜新春刮刮樂B-FA全方位臉部"}, {"code": "2120042", "name": "2023法布甜母親節刮刮樂B-FA全方位臉部"}, {"code": "2120048", "name": "2024GOMAJ-FA極緻臉部保養課程($899)"}, {"code": "2220033", "name": "票券用-FA極緻臉部保養課程(可計業績)"}, {"code": "2230003", "name": "12周年年卡-FA極緻臉部保養課程($3500)"}, {"code": "2230023", "name": "2021母親節-FA極緻臉部保養課程($3500)"}, {"code": "2230037", "name": "13周年年卡-FA極緻臉部保養課程($3500)"}, {"code": "2230056", "name": "14周年年卡-FA極緻臉部保養課程($3500)"}, {"code": "2230069", "name": "2023新春年卡-FA極緻臉部保養課程($3500)"}, {"code": "2230087", "name": "2023母親節-FA極緻臉部保養課程($3500)"}, {"code": "2230098", "name": "15周年年卡-FA極緻臉部保養課程($3500)"}, {"code": "2230143", "name": "2024母親節-FA極緻臉部保養課程($3500)"}, {"code": "2230153", "name": "16週年年卡-FA極緻臉部保養課程($3500)"}, {"code": "2230186", "name": "2025母親節-FA極緻臉部保養課程($3500)"}, {"code": "2230233", "name": "17週年年卡-FA極緻臉部保養課程($3500)"}, {"code": "2230250", "name": "2026美加新春-FA極緻臉部保養課程($3500)"}, {"code": "2230274", "name": "2026美加母親節-FA極緻臉部保養課程($3500)"}, {"code": "2240010", "name": "潮爸城美加合作專案(FA雷射2選1)"}, {"code": "2240020", "name": "16週年年卡-杏仁酸/FA/雪肌(三選一)"}, {"code": "2270005", "name": "FA極緻臉部保養課程：11堂 /15000"}, {"code": "2270021", "name": "12周年年卡-FA極緻臉部保養課程($3500)"}, {"code": "2500009", "name": "12周年兌換點數-FA極緻臉部保養課程($3500)"}, {"code": "2500028", "name": "12周年刮刮樂-FA極緻臉部保養課程($3500)"}, {"code": "2540011", "name": "13周年兌換點數-FA極緻臉部保養課程($3500)"}, {"code": "2540044", "name": "13周年三萬紅包-FA極緻臉部保養課程($3500)"}, {"code": "2550023", "name": "2022母親節二萬紅包-FA極緻臉部保養課程($3500)"}, {"code": "2550076", "name": "2023母親節三萬刮刮樂-FA極緻臉部保養課程($3500)"}, {"code": "2550107", "name": "15周年三萬娃娃機-FA極緻臉部保養課程($3500)"}, {"code": "2550138", "name": "2024母親節三萬刮刮樂-FA極緻臉部保養課程($3500)"}, {"code": "2550158", "name": "2024母親節十萬扭蛋-FA極緻臉部保養課程半年卡(6次)"}, {"code": "2550169", "name": "16週年三萬鏡子-FA極緻臉部保養課程($3500)"}, {"code": "2550216", "name": "2025母親節三萬一番賞-FA極緻臉部保養課程($3500)"}, {"code": "2550284", "name": "17週年三萬刮刮樂-FA極緻臉部保養課程($3500)"}, {"code": "2550341", "name": "2026美加母親節三萬扭蛋-FA極緻臉部保養課程1堂"}, {"code": "2770006", "name": "FA極緻臉部保養課程(Free)"}]}, {"category": "循環艙", "items": [{"code": "2130005", "name": "第三代代謝循環艙($2000)"}, {"code": "2130006", "name": "第三代代謝循環艙+頭臉刮($2100)"}, {"code": "2130042", "name": "2025法布甜新春刮刮樂-代謝循環艙"}, {"code": "2220001", "name": "票券用-第三代代謝循環艙($1500)"}, {"code": "2220006", "name": "票券用-第三代代謝循環艙+頭臉刮($2100)"}, {"code": "2230248", "name": "2026美加新春-第三代代謝循環艙($1500)"}, {"code": "2270026", "name": "第三代代謝循環艙 :40堂 / 24000(包堂)"}, {"code": "2280015", "name": "第三代代謝循環艙 :12堂 /9900"}, {"code": "2280017", "name": "第三代代謝循環艙+頭臉刮 :12堂 /15000"}, {"code": "2280028", "name": "第三代代謝循環艙 :10堂 /9000"}, {"code": "2550376", "name": "2026康博母親節十萬盲盒-(美加)第三代代謝循環艙($1500)"}, {"code": "2550388", "name": "2026康博週年慶-(美加)代謝循環艙($8000)"}, {"code": "2550401", "name": "2026康博週年慶10萬小綠蛋-(南康)代謝循環艙($8000)"}, {"code": "2770013", "name": "第三代代謝循環艙(Free)"}, {"code": "2770075", "name": "第三代代謝循環艙+頭臉刮(Free)"}]}, {"category": "能量艙", "items": [{"code": "2130031", "name": "2024GOMAJ-第三代代謝能量艙($599)"}, {"code": "2130035", "name": "2.0金鑽卡-能量艙($1500)"}, {"code": "2130040", "name": "第三代代謝能量艙(血導專用)"}, {"code": "2130043", "name": "2025北中開幕茶會抽獎-第三代代謝能量艙($2000)"}, {"code": "2130059", "name": "第三代代謝能量艙($2000)"}, {"code": "2230158", "name": "16週年年卡-第三代代謝能量艙($1500)"}, {"code": "2500010", "name": "12周年兌換點數-第三代代謝能量艙+頭部刮($2100)"}, {"code": "2500027", "name": "12周年刮刮樂-第三代代謝能量艙+頭部刮($2100)"}, {"code": "2500035", "name": "12周年刮刮樂-科技能量艙年卡"}, {"code": "2540012", "name": "13周年兌換點數-第三代代謝能量艙+頭部刮($2100)"}, {"code": "2550024", "name": "2022母親節二萬紅包-第三代代謝能量艙($1500)"}, {"code": "2550264", "name": "2025康博週年慶-代謝能量艙($8000)"}, {"code": "2770119", "name": "第三代代謝能量艙(血導專用)(Free)"}, {"code": "2770160", "name": "第三代代謝能量艙(Free)"}]}, {"category": "靜脈雷射", "items": [{"code": "2160001", "name": "靜脈雷射($5000)"}, {"code": "2160033", "name": "2.0金鑽卡-靜脈雷射($5000)"}, {"code": "2160037", "name": "2.0鑽卡週享療程-靜脈雷射(Free)"}, {"code": "2220021", "name": "票券用-靜脈雷射($5000)"}, {"code": "2300001", "name": "靜脈雷射 :10堂($50000)"}, {"code": "2300003", "name": "靜脈雷射 :40堂/150000"}, {"code": "2550203", "name": "2024康博週年慶-靜脈雷射($5000)"}, {"code": "2770023", "name": "靜脈雷射(Free)"}]}, {"category": "LLLT", "items": [{"code": "2160042", "name": "LLLT-無針靜脈雷射-30分/堂(單手)($2500)"}, {"code": "2160045", "name": "2.0金鑽卡週享療程-LLLT無針靜脈雷射-單手(30分)(Free)"}, {"code": "2160047", "name": "2025北屯開幕茶會抽獎-LLLT無針靜脈雷射-單手(30分)($2500)"}, {"code": "2160049", "name": "LLLT-無針靜脈雷射-30分/堂(雙手)($5000)"}, {"code": "2160050", "name": "2.0金鑽卡週享療程-LLLT無針靜脈雷射-雙手(30分)(Free)"}, {"code": "2160051", "name": "2.0金鑽卡-LLLT-無針靜脈雷射-30分/堂(雙手)($5000)"}, {"code": "2160057", "name": "3.0訂閱制-LLLT-無針靜脈雷射-30分/堂(單手)($2500)"}, {"code": "2220026", "name": "票券用-LLLT無針靜脈雷射-單手(30分)($2500)"}, {"code": "2220030", "name": "票券用-LLLT-無針靜脈雷射-30分/堂(雙手)($5000)"}, {"code": "2220038", "name": "2026股東票券用-LLLT無針靜脈雷射-單手(30分)($2500)"}, {"code": "2240024", "name": "ILIB靜脈/LLLT無針靜脈(二選一)"}, {"code": "2240025", "name": "2.0金鑽卡-ILIB靜脈/LLLT無針靜脈(二選一)"}, {"code": "2550207", "name": "2025DC新春福袋刮刮樂-LLLT無針靜脈雷射-單手(30分)(Free)"}, {"code": "2550212", "name": "2025母親節三萬一番賞-LLLT無針靜脈雷射-單手(30分)($2250)"}, {"code": "2550269", "name": "17週年三萬刮刮樂-(康博課程)LLLT無針靜脈(單手30分)2堂($5000)"}, {"code": "2550313", "name": "2026康博新春-LLLT無針靜脈(單手30分)($2500)"}, {"code": "2550327", "name": "2026美加新春三萬御守-(康博課程)LLLT無針靜脈雷射(單手30分)*1堂"}, {"code": "2770088", "name": "LLLT無針靜脈雷射-單手(30分)(Free)"}, {"code": "2770139", "name": "台商經濟論壇x娘家好禮_LLLT無針靜脈雷射-單手(30分)(Free)"}, {"code": "2770140", "name": "ILIB靜脈/LLLT無針靜脈(二選一)(Free)"}, {"code": "2770142", "name": "LLLT無針靜脈雷射-雙手(30分)(Free)"}, {"code": "2770149", "name": "美加投資展專屬好禮-LLLT無針靜脈雷射-單手(30分)(Free)"}]}, {"category": "OLIB", "items": [{"code": "2160043", "name": "OLIB-貼式靜脈雷射(手腕)-60分(單手)"}, {"code": "2160044", "name": "2.0金鑽卡週享療程-OLIB-貼式靜脈雷射(手腕)-60分(單手)(Free)"}, {"code": "2550337", "name": "2026康博新春刮刮卡-OLIB貼式靜脈雷射(手腕)-60分(單手)"}, {"code": "2770089", "name": "OLIB-貼式靜脈雷射(手腕)-60分(單手)(Free)"}]}, {"category": "淨膚/脈衝光", "items": [{"code": "2010003", "name": "12億魔鏡頂點雷射C6($3500)"}, {"code": "2010007", "name": "複合式魔鏡頂點雷射C6($5000)"}, {"code": "2010033", "name": "2022金虎吉祥戳戳樂-淨膚雷射($3500)"}, {"code": "2230005", "name": "12周年年卡-12億魔鏡頂點雷射C6($3500)"}, {"code": "2230085", "name": "2023母親節-淨膚雷射($3500)"}, {"code": "2240008", "name": "HC白金會員-脈衝光(二選一)"}, {"code": "2240039", "name": "淨膚/脈衝光(二選一)(free)"}, {"code": "2250003", "name": "12倍魔鏡頂點雷射C6：15次/19900"}, {"code": "2250049", "name": "12周年年卡-12倍魔鏡頂點雷射C6($3500)"}, {"code": "2540015", "name": "13周年兌換點數-淨膚雷射($3500)"}, {"code": "2550018", "name": "2022母親節二萬紅包-淨膚雷射($3500)"}, {"code": "2550069", "name": "2023母親節三萬刮刮樂-淨膚雷射($3500)"}, {"code": "2550094", "name": "2023母親節三萬刮樂-淨膚雷射年卡(12次)"}, {"code": "2550135", "name": "2024母親節三萬刮刮樂-淨膚雷射($3500)"}, {"code": "2550157", "name": "2024母親節十萬扭蛋-淨膚雷射半年卡(6次)"}, {"code": "2550236", "name": "2025母親節三萬一番賞-淨膚雷射($3500)"}, {"code": "2550344", "name": "2026美加母親節三萬紅包-淨膚雷射1堂"}, {"code": "2770008", "name": "12倍魔鏡頂點雷射C6(Free)"}, {"code": "2770155", "name": "2025/12/22好市多集合中歡圖-12倍魔鏡頂點雷射C6(Free)"}, {"code": "2010004", "name": "蘋果脈衝光IPL($3500)"}, {"code": "2010005", "name": "複合式蘋果脈衝光IPL($5000)"}, {"code": "2230217", "name": "17週年年卡-蘋果脈衝光IPL"}, {"code": "2230285", "name": "2026美加母親節-蘋果脈衝光IPL"}, {"code": "2500030", "name": "12周年刮刮樂-蘋果脈衝光IPL($3500)"}, {"code": "2550059", "name": "14周年三萬骰子-蘋果脈衝光IPL($3500)"}, {"code": "2550108", "name": "15周年三萬娃娃機-蘋果脈衝光IPL($3500)"}, {"code": "2550174", "name": "16週年三萬鏡子-蘋果脈衝光IPL($3500)"}, {"code": "2770009", "name": "蘋果脈衝光IPL(Free)"}]}, {"category": "奈秒雷射", "items": [{"code": "2010028", "name": "奈秒雷射($3500)"}, {"code": "2010037", "name": "2023法布甜母親節刮刮樂A-奈秒雷射"}, {"code": "2220004", "name": "票券用-奈秒雷射($3500)"}, {"code": "2220024", "name": "票券用-奈秒雷射($3500)(可計業績)"}, {"code": "2230035", "name": "13周年年卡-奈秒雷射($3500)"}, {"code": "2230040", "name": "2022母親節-奈秒雷射($3500)"}, {"code": "2230057", "name": "14周年年卡-奈秒雷射($3500)"}, {"code": "2230077", "name": "2023母親節-奈秒雷射($3500)"}, {"code": "2230106", "name": "15周年年卡-奈秒雷射($3500)"}, {"code": "2230121", "name": "2024母親節-奈秒雷射($3500)"}, {"code": "2230161", "name": "16週年年卡-奈秒雷射($3500)"}, {"code": "2230208", "name": "17週年年卡-奈秒雷射($3500)"}, {"code": "2230243", "name": "2026美加新春-奈秒雷射($3500)"}, {"code": "2230259", "name": "2026美加母親節-奈秒雷射($3500)"}, {"code": "2240004", "name": "奈秒雷射"}, {"code": "2250052", "name": "12周年年卡-奈秒雷射年卡"}, {"code": "2500049", "name": "12周年HI抵用-奈秒雷射(二選一)"}, {"code": "2540045", "name": "13周年三萬紅包-奈秒雷射($3500)"}, {"code": "2550046", "name": "14周年十萬金蛋-奈秒雷射年卡(臉部)($21000)"}, {"code": "2550117", "name": "15周年十萬金蛋-奈秒雷射半年卡(臉部)($21000)"}, {"code": "2550184", "name": "16週年十萬金曲-奈秒雷射年卡(臉部)"}, {"code": "2550271", "name": "17週年三萬刮刮樂-奈秒雷射1堂($3500)"}, {"code": "2770066", "name": "奈秒雷射(Free)"}]}, {"category": "氫氧療程", "items": [{"code": "2220039", "name": "2026股東票券用-氫氧課程($3000)"}, {"code": "2230053", "name": "14周年年卡-氫氧課程($3000)"}, {"code": "2240011", "name": "潮爸城康博合作專案(氫氧/保肝2選1)"}, {"code": "2240015", "name": "525開幕康博療程二選一(保肝/氫氧)"}, {"code": "2500007", "name": "12周年刮刮樂-氫氧課程($2500)"}, {"code": "2500031", "name": "12周年刮刮樂-氫氧課程($2500)"}, {"code": "2540014", "name": "13周年兌換點數-氫氧課程($2500)"}, {"code": "2540046", "name": "13周年三萬紅包-氫氧課程($2500)"}, {"code": "2540058", "name": "13周年十萬金蛋-氫氧課程年卡( $23400)"}, {"code": "2550021", "name": "2022母親節二萬紅包-氫氧課程($2500)"}, {"code": "2550056", "name": "14周年三萬骰子-氫氧課程2堂($5000)"}, {"code": "2550074", "name": "2023母親節三萬刮刮樂-氫氧課程($2500)"}, {"code": "2550110", "name": "15周年三萬娃娃機-氫氧課程2堂($5000)"}, {"code": "2550136", "name": "2024母親節三萬刮刮樂-氫氧課程($2500)"}, {"code": "2550201", "name": "2024康博週年慶-氫氧課程($3000)"}, {"code": "2550259", "name": "2025康博週年慶-氫氧課程($3000)"}, {"code": "2550333", "name": "2026康博新春-氫氧課程($3000)"}, {"code": "2770018", "name": "氫氧課程(Free)"}, {"code": "2160002", "name": "氫氧課程($3000)"}, {"code": "2220008", "name": "票券用-氫氧課程($3000)"}]}, {"category": "杏仁酸煥膚(臉)", "items": [{"code": "2120007", "name": "杏仁酸煥膚(臉)($3900)"}, {"code": "2120028", "name": "2022金虎吉祥戳戳樂-杏仁酸煥膚(臉)($3900)"}, {"code": "2120029", "name": "2022良興VIP專案-杏仁酸煥膚(臉)(Free)"}, {"code": "2220011", "name": "票券用-杏仁酸煥膚(臉)($3900)"}, {"code": "2230041", "name": "2022母親節-杏仁酸煥膚(臉)($3900)"}, {"code": "2230055", "name": "14周年年卡-杏仁酸煥膚(臉)($3900)"}, {"code": "2230072", "name": "2023新春年卡-杏仁酸煥膚(臉)($3900)"}, {"code": "2230094", "name": "2023母親節-杏仁酸煥膚(臉)($3900)"}, {"code": "2230103", "name": "15周年年卡-杏仁酸煥膚(臉)($3900)"}, {"code": "2230142", "name": "2024母親節-杏仁酸煥膚(臉)($3900)"}, {"code": "2230152", "name": "16週年年卡-杏仁酸煥膚(臉)($3900)"}, {"code": "2230185", "name": "2025母親節-杏仁酸煥膚(臉)($3900)"}, {"code": "2230232", "name": "17週年年卡-杏仁酸煥膚(臉)($3900)"}, {"code": "2230253", "name": "2026美加新春-杏仁酸煥膚(臉)($3900)"}, {"code": "2230282", "name": "2026美加母親節-杏仁酸煥膚(臉)($3900)"}, {"code": "2500013", "name": "12周年兌換點數-杏仁酸煥膚(臉)($3900)"}, {"code": "2540013", "name": "13周年兌換點數-杏仁酸煥膚(臉)($3900)"}, {"code": "2550022", "name": "2022母親節二萬紅包-杏仁酸煥膚(臉)($3900)"}, {"code": "2550075", "name": "2023母親節三萬刮刮樂-杏仁酸煥膚(臉)($3900)"}, {"code": "2770030", "name": "杏仁酸煥膚(臉)(Free)"}]}, {"category": "軟膜", "items": [{"code": "2120012", "name": "軟膜"}, {"code": "2230101", "name": "15周年年卡-軟膜($500)"}, {"code": "2230150", "name": "16週年年卡-軟膜($500)"}, {"code": "2770036", "name": "軟膜(Free)"}]}, {"category": "保肝針-基因營養針", "items": [{"code": "2170002", "name": "保肝針-基因營養針($1500)"}, {"code": "2170063", "name": "2.0金鑽卡-保肝針-基因營養針"}, {"code": "2220003", "name": "票券用-保肝針-基因營養針($1500)"}, {"code": "2770010", "name": "保肝針-基因營養針(Free)"}]}, {"category": "美白針-基因營養針", "items": [{"code": "2170001", "name": "美白針-基因營養針($1500)"}, {"code": "2220002", "name": "票券用-美白針-基因營養針($1500)"}, {"code": "2230086", "name": "2023母親節-(美白針)基因營養針($1500)"}, {"code": "2230254", "name": "2026美加新春-美白針-基因營養針($1500)"}, {"code": "2230267", "name": "2026美加母親節-美白針-基因營養針($1500)"}, {"code": "2230283", "name": "2026美加母親節-美白針-基因營養針($1500)"}, {"code": "2770011", "name": "美白針-基因營養針(Free)"}, {"code": "2230100", "name": "15周年年卡-(美白)基因營養針($1500)"}, {"code": "2230138", "name": "2024母親節-(美白)基因營養針($1500)"}, {"code": "2230159", "name": "16週年年卡-(美白)基因營養針($1500)"}]}, {"category": "客製化針劑類-基因營養", "items": [{"code": "2220027", "name": "票券用-客製化針劑(基因營養)($1500)"}, {"code": "2230066", "name": "14周年年卡-基因營養針($1500)"}, {"code": "2230070", "name": "2023新春年卡-基因營養針($1500)"}, {"code": "2230097", "name": "15周年年卡-基因營養針($1500)"}, {"code": "2230261", "name": "2026美加母親節-基因營養針($1500)"}, {"code": "2240005", "name": "基因營養針(三選一)"}, {"code": "2500006", "name": "12周年兌換點數-基因營養針($1500)"}, {"code": "2500052", "name": "12周年H抵用-基因營養針(二選一)"}, {"code": "2540009", "name": "13周年兌換點數-基因營養針($1500)"}]}, {"category": "客製化針劑(全方位)", "items": [{"code": "2170064", "name": "客製化針劑(全方位)($3000)"}, {"code": "2170088", "name": "3.0訂閱制-客製化針劑(全方位)"}, {"code": "2220032", "name": "票券用-客製化針劑(全方位)"}, {"code": "2310173", "name": "客製化針劑(全方位):10堂($30000)"}, {"code": "2550199", "name": "2024康博週年慶-客製化針劑(全方位)"}, {"code": "2770042", "name": "客製化針劑(全方位)(Free)"}]}, {"category": "RF微波拉提", "items": [{"code": "2120006", "name": "RF微波拉提課程($3500)"}, {"code": "2220007", "name": "票券用-RF微波拉提課程($3500)"}, {"code": "2230102", "name": "15周年年卡-RF微波拉提課程($3500)"}, {"code": "2230130", "name": "2024母親節-RF微波拉提課程($3500)"}, {"code": "2230157", "name": "16週年年卡-RF微波拉提課程($3500)"}, {"code": "2230195", "name": "2025母親節-RF微波拉提課程($3500)"}, {"code": "2230220", "name": "17週年年卡-RF微波拉提課程($3500)"}, {"code": "2230252", "name": "2026美加新春-RF微波拉提課程($3500)"}, {"code": "2230263", "name": "2026美加母親節-RF微波拉提課程($3500)"}, {"code": "2270013", "name": "RF微波拉提課程 :11堂 /15000"}, {"code": "2770055", "name": "RF微波拉提課程(Free)"}]}]
+;
+const STORAGE_KEY = 'kb_course_db_v1';
+const EDIT_PASSWORD = '9999';
+
+let db = loadDB();
+let parsed = null;
+let sortState = {};
+let editUnlocked = false;
+let editItemsExpanded = false;
+
+function loadDB(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) return JSON.parse(raw);
+  }catch(e){}
+  return JSON.parse(JSON.stringify(DEFAULT_DB));
+}
+function saveDB(){
+  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(db)); }catch(e){}
+}
+function toast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toast._h);
+  toast._h = setTimeout(()=>t.classList.remove('show'), 2200);
+}
+
+/* ---------- parsing ---------- */
+function normHeader(s){ return String(s==null?'':s).replace(/\s+/g,'').trim(); }
+function excelSerialToDate(serial){
+  const ms = Math.round((serial - 25569) * 86400 * 1000);
+  return new Date(ms);
+}
+function fmtDate(d){
+  return d.getUTCFullYear() + '/' + String(d.getUTCMonth()+1).padStart(2,'0') + '/' + String(d.getUTCDate()).padStart(2,'0');
+}
+function normCode(v){
+  if (v == null) return '';
+  let s = String(v).trim();
+  if (/^\d+$/.test(s)) s = s.padStart(7,'0');
+  return s;
+}
+const FIELD_MAP = {
+  '客戶姓名':'name', '系統客代':'custCode', '電話':'phone', '銷售分店':'branch',
+  '商品碼':'productCode', '療程名稱':'productName', '購買日期':'purchaseDate',
+  '使用期限':'expiry', '剩餘堂數':'sessions', '目前剩餘點數':'points'
+};
+function parseResidualFile(buf){
+  const wb = XLSX.read(buf, {type:'array'});
+  const ws = wb.Sheets[wb.SheetNames[0]];
+  const rows = XLSX.utils.sheet_to_json(ws, {header:1, raw:true, defval:''});
+  let headerRowIdx = -1, colMap = {};
+  for (let r=0; r<Math.min(rows.length,15); r++){
+    const row = rows[r];
+    for (let c=0;c<row.length;c++){
+      if (normHeader(row[c]) === '商品碼'){ headerRowIdx = r; break; }
+    }
+    if (headerRowIdx>=0) break;
+  }
+  if (headerRowIdx < 0) throw new Error('找不到表頭「商品碼」，請確認上傳的是清單檢視格式的殘值統計表');
+  const headerRow = rows[headerRowIdx];
+  headerRow.forEach((cell,idx)=>{
+    const key = FIELD_MAP[normHeader(cell)];
+    if (key && !(key in colMap)) colMap[key] = idx;
+  });
+  const required = ['name','custCode','branch','productCode','productName','purchaseDate','expiry','sessions','points'];
+  const missing = required.filter(k=>!(k in colMap));
+  if (missing.length) throw new Error('檔案缺少欄位: '+missing.join('、'));
+
+  const items = [];
+  let customer = null;
+  for (let r=headerRowIdx+1; r<rows.length; r++){
+    const row = rows[r];
+    const nameVal = row[colMap.name];
+    if (nameVal === '' || nameVal == null) break;
+    if (!customer){
+      customer = {
+        name: String(nameVal).trim(),
+        custCode: String(row[colMap.custCode]).trim(),
+        phone: String(row[colMap.phone]).trim()
+      };
+    }
+    const productName = String(row[colMap.productName]||'').trim();
+    if (productName.includes('開卡')) continue;
+    const sessions = Number(row[colMap.sessions])||0;
+    const points = Number(row[colMap.points])||0;
+    let qty, unit;
+    if (sessions > 0){ qty = sessions; unit = '堂'; } else { qty = points; unit = '點'; }
+    let purchaseDate = row[colMap.purchaseDate];
+    if (typeof purchaseDate === 'number'){ purchaseDate = fmtDate(excelSerialToDate(purchaseDate)); }
+    else { purchaseDate = String(purchaseDate||'').trim(); }
+    const expiry = String(row[colMap.expiry]||'').trim();
+    items.push({
+      productCode: normCode(row[colMap.productCode]),
+      productName, purchaseDate, expiry, qty, unit,
+      branch: String(row[colMap.branch]||'').trim()
+    });
+  }
+  if (!customer) throw new Error('沒有讀到任何會員資料，請確認檔案內容');
+  return {customer, items};
+}
+
+function handleFileUpload(evt){
+  const file = evt.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e){
+    try{
+      const buf = new Uint8Array(e.target.result);
+      parsed = parseResidualFile(buf);
+      sortState = {};
+      render();
+      toast('已匯入 ' + parsed.customer.name + ' 的殘值資料');
+    }catch(err){
+      toast('匯入失敗：' + err.message);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+  evt.target.value = '';
+}
+
+/* ---------- matching / grouping ---------- */
+function buildCodeIndex(){
+  const map = {};
+  db.forEach(cat=>{
+    cat.items.forEach(it=>{ map[normCode(it.code)] = {category: cat.category, brand: cat.brand || ''}; });
+  });
+  return map;
+}
+function branchPrefix(code){
+  const m = String(code||'').match(/^[A-Za-z]+/);
+  return m ? m[0].toUpperCase() : (code || '未分類分店');
+}
+const BRAND_MAP = {'D':'康博', 'M':'美加', 'HQ':'總部'};
+function brandName(prefix){ return BRAND_MAP[prefix] || prefix; }
+function orderPrefixes(prefixes){
+  const preferred = ['D','M','HQ'];
+  const rest = prefixes.filter(p=>!preferred.includes(p)).sort();
+  return preferred.filter(p=>prefixes.includes(p)).concat(rest);
+}
+function expirySortValue(expiry){
+  if (!expiry || expiry.includes('不限期')) return Infinity;
+  const t = Date.parse(expiry.replace(/\//g,'-'));
+  return isNaN(t) ? Infinity : t;
+}
+function dateSortValue(dateStr){
+  const t = Date.parse(String(dateStr).replace(/\//g,'-'));
+  return isNaN(t) ? 0 : t;
+}
+function defaultCompare(a,b){
+  if (a.productName !== b.productName) return a.productName < b.productName ? -1 : 1;
+  return a.productCode < b.productCode ? -1 : (a.productCode > b.productCode ? 1 : 0);
+}
+function isExpiringSoon(expiry){
+  if (!expiry || expiry.includes('不限期')) return false;
+  const t = Date.parse(String(expiry).replace(/\//g,'-'));
+  if (isNaN(t)) return false;
+  const threshold = new Date();
+  threshold.setMonth(threshold.getMonth()+3);
+  return t <= threshold.getTime();
+}
+function warnIcon(){
+  return '<svg class="warn-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#c0392b" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 L22 20 L2 20 Z"></path><line x1="12" y1="9" x2="12" y2="14"></line><circle cx="12" cy="17.3" r="0.9" fill="#c0392b" stroke="none"></circle></svg>';
+}
+function expiryCell(expiry){
+  return (isExpiringSoon(expiry) ? warnIcon() : '') + esc(expiry);
+}
+
+/* ---------- rendering ---------- */
+function render(){
+  const root = document.getElementById('content');
+  if (!parsed){
+    root.innerHTML = '<div class="empty-state"><div class="big">尚未匯入會員殘值統計表</div><div>請點上方「匯入殘值表」，選擇清單檢視格式的 .xls 檔案</div></div>';
+    return;
+  }
+  const codeIndex = buildCodeIndex();
+  const byBranch = {};
+  parsed.items.forEach(it=>{
+    const match = codeIndex[it.productCode];
+    const bucket = (match && match.brand) ? match.brand : branchPrefix(it.branch);
+    (byBranch[bucket] = byBranch[bucket] || []).push(it);
+  });
+  const order = orderPrefixes(Object.keys(byBranch));
+
+  let html = '';
+  html += '<div class="customer-card">';
+  html += field('客戶姓名', parsed.customer.name);
+  html += field('系統客代', parsed.customer.custCode);
+  html += field('客戶電話', parsed.customer.phone);
+  html += '</div>';
+
+  order.forEach(prefix=>{
+    const items = byBranch[prefix];
+    const branchCodes = [...new Set(items.map(i=>i.branch))].sort().join(' · ');
+    const unmatched = items.filter(i=>!codeIndex[i.productCode]);
+    const matchedByCat = {};
+    items.forEach(i=>{
+      const match = codeIndex[i.productCode];
+      if (match) (matchedByCat[match.category] = matchedByCat[match.category] || []).push(i);
+    });
+
+    html += '<div class="branch-block">';
+    html += '<div class="branch-title"><div class="bar"></div><div class="name">銷售品牌 ' + esc(brandName(prefix)) + '</div><div class="codes">' + branchCodes + '</div></div>';
+
+    const sortKey = prefix + '_unmatched';
+    if (!sortState[sortKey]) sortState[sortKey] = {col:'default', dir:'asc'};
+    const sst = sortState[sortKey];
+    const sortedUnmatched = [...unmatched].sort((a,b)=>{
+      if (sst.col==='purchaseDate' || sst.col==='expiry'){
+        const va = sst.col==='expiry' ? expirySortValue(a.expiry) : dateSortValue(a.purchaseDate);
+        const vb = sst.col==='expiry' ? expirySortValue(b.expiry) : dateSortValue(b.purchaseDate);
+        return sst.dir==='asc' ? va-vb : vb-va;
+      }
+      return defaultCompare(a,b);
+    });
+
+    html += '<div class="sub-section">';
+    html += '<div class="sub-title"><div class="label">未歸類療程</div><div class="count">' + unmatched.length + ' 筆</div></div>';
+    if (sortedUnmatched.length){
+      html += '<table><tr>';
+      html += '<th style="width:14%">療程代碼</th>';
+      html += '<th>療程名稱</th>';
+      html += th('購買日期','purchaseDate',sortKey,'14%');
+      html += th('使用期限','expiry',sortKey,'14%');
+      html += '<th class="num" style="width:10%">剩餘數量</th>';
+      html += '</tr>';
+      sortedUnmatched.forEach(it=>{
+        html += '<tr><td class="muted-code">' + esc(it.productCode) + '</td><td>' + esc(it.productName) + '</td><td>' + esc(it.purchaseDate) + '</td><td>' + expiryCell(it.expiry) + '</td><td class="num">' + it.qty + ' ' + it.unit + '</td></tr>';
+      });
+      html += '</table>';
+    } else {
+      html += '<div class="hint">此區塊沒有未歸類的療程</div>';
+    }
+    html += '</div>';
+
+    html += '<div class="sub-section">';
+    html += '<div class="sub-title"><div class="label">已歸類療程</div></div>';
+    const catNames = db.map(c=>c.category).filter(name=>matchedByCat[name] && matchedByCat[name].length);
+    if (catNames.length){
+      html += '<div class="cat-cards">';
+      catNames.forEach(cat=>{
+        const catSortKey = prefix + '_cat_' + cat;
+        if (!sortState[catSortKey]) sortState[catSortKey] = {col:'expiry', dir:'asc'};
+        const csst = sortState[catSortKey];
+        const rows = [...matchedByCat[cat]].sort((a,b)=>{
+          const va = csst.col==='purchaseDate' ? dateSortValue(a.purchaseDate) : expirySortValue(a.expiry);
+          const vb = csst.col==='purchaseDate' ? dateSortValue(b.purchaseDate) : expirySortValue(b.expiry);
+          return csst.dir==='asc' ? va-vb : vb-va;
+        });
+        const totals = {};
+        rows.forEach(r=>{ totals[r.unit] = (totals[r.unit]||0) + r.qty; });
+        const totalStr = Object.keys(totals).map(u=>totals[u]+' '+u).join(' · ');
+        html += '<div class="cat-card"><div class="cat-card-head"><div class="cname">' + esc(cat) + '</div><div class="total">合計 ' + totalStr + '</div></div>';
+        html += '<table class="cat-table"><tr>' + th('購買日期','purchaseDate',catSortKey,'40%') + th('使用期限','expiry',catSortKey,'40%') + '<th class="num" style="width:20%">剩餘數量</th></tr>';
+        rows.forEach(r=>{
+          html += '<tr><td>' + esc(r.purchaseDate) + '</td><td>' + expiryCell(r.expiry) + '</td><td class="num">' + r.qty + ' ' + r.unit + '</td></tr>';
+        });
+        html += '</table>';
+        html += '</div>';
+      });
+      html += '</div>';
+    } else {
+      html += '<div class="hint">此區塊沒有已歸類的療程</div>';
+    }
+    html += '</div>';
+
+    html += '</div>';
+  });
+
+  root.innerHTML = html;
+}
+function field(label, value){
+  return '<div class="field"><div class="label">' + esc(label) + '</div><div class="value">' + esc(value||'-') + '</div></div>';
+}
+function th(label, col, sortKey, width){
+  const sst = sortState[sortKey] || {col:'purchaseDate', dir:'asc'};
+  const arrow = sst.col===col ? (sst.dir==='asc' ? '&#9650;' : '&#9660;') : '';
+  return '<th class="sortable" style="width:' + width + '" onclick="toggleSort(\'' + sortKey + '\',\'' + col + '\')">' + esc(label) + ' <span class="arrow">' + arrow + '</span></th>';
+}
+function toggleSort(sortKey, col){
+  const sst = sortState[sortKey] || {col:'purchaseDate', dir:'asc'};
+  if (sst.col === col){ sst.dir = sst.dir==='asc' ? 'desc' : 'asc'; }
+  else { sst.col = col; sst.dir = 'asc'; }
+  sortState[sortKey] = sst;
+  render();
+}
+function esc(s){
+  return String(s==null?'':s).replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+
+/* ---------- edit database panel ---------- */
+function openEditGate(){
+  if (editUnlocked){ openEditPanel(); return; }
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay no-print';
+  overlay.innerHTML = '<div class="modal" style="max-width:360px;">' +
+    '<h3>輸入密碼以編輯對照資料庫</h3>' +
+    '<div class="row"><input type="password" id="gatePw" placeholder="請輸入密碼" style="flex:1;"></div>' +
+    '<div id="gateErr" style="color:var(--danger);font-size:12px;display:none;">密碼錯誤</div>' +
+    '<div class="close-row"><button onclick="closeModal()">取消</button><button class="primary" onclick="checkGate()">確認</button></div>' +
+    '</div>';
+  document.getElementById('modalRoot').appendChild(overlay);
+  document.getElementById('gatePw').focus();
+  document.getElementById('gatePw').addEventListener('keydown', e=>{ if(e.key==='Enter') checkGate(); });
+}
+function checkGate(){
+  const val = document.getElementById('gatePw').value;
+  if (val === EDIT_PASSWORD){
+    editUnlocked = true;
+    closeModal();
+    openEditPanel();
+  } else {
+    document.getElementById('gateErr').style.display = 'block';
+  }
+}
+function closeModal(){
+  document.getElementById('modalRoot').innerHTML = '';
+}
+function openEditPanel(){
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay no-print';
+  overlay.innerHTML = '<div class="modal" id="editModal"></div>';
+  document.getElementById('modalRoot').appendChild(overlay);
+  renderEditPanel();
+}
+function renderEditPanel(){
+  const m = document.getElementById('editModal');
+  if (!m) return;
+  let html = '<h3>編輯常贈送療程對照資料庫</h3>';
+  html += '<div class="hint" style="margin-bottom:10px;">用 &#9650;&#9660; 調整分類順序，會員報表上「已歸類療程」也會依這個順序顯示。每個分類可指定「歸屬品牌」，指定後該分類品項會固定顯示在該品牌區塊，不受實際銷售分店影響。</div>';
+  html += '<div class="row"><button class="small" onclick="toggleEditCollapse()">' + (editItemsExpanded ? '收合全部品項' : '展開全部品項') + '</button></div>';
+  db.forEach((cat, ci)=>{
+    html += '<div class="edit-cat">';
+    html += '<div class="edit-cat-head">' +
+      '<button class="small" onclick="moveCategory(' + ci + ',-1)" ' + (ci===0?'disabled':'') + ' title="上移">&#9650;</button>' +
+      '<button class="small" onclick="moveCategory(' + ci + ',1)" ' + (ci===db.length-1?'disabled':'') + ' title="下移">&#9660;</button>' +
+      '<input type="text" value="' + escAttr(cat.category) + '" onchange="renameCategory(' + ci + ', this.value)">' +
+      brandSelect(ci, cat.brand) +
+      (editItemsExpanded ? '' : '<span class="hint" style="margin:0 4px;white-space:nowrap;">' + cat.items.length + ' 項</span>') +
+      '<button class="small danger" onclick="removeCategory(' + ci + ')">刪除分類</button></div>';
+    if (editItemsExpanded){
+      cat.items.forEach((it, ii)=>{
+        html += '<div class="edit-item-row"><span class="code">' + esc(it.code) + '</span><span class="name">' + esc(it.name) + '</span><button class="small" onclick="removeItem(' + ci + ',' + ii + ')">移除</button></div>';
+      });
+      html += '<div class="add-item-row">' +
+        '<input class="code-input" type="text" placeholder="商品碼(7碼)" id="newCode_' + ci + '">' +
+        '<input style="flex:1" type="text" placeholder="商品名稱" id="newName_' + ci + '">' +
+        '<button class="small" onclick="addItem(' + ci + ')">新增品項</button>' +
+        '</div>';
+    }
+    html += '</div>';
+  });
+  html += '<div class="row"><input type="text" id="newCatName" placeholder="新分類名稱" style="flex:1;"><button onclick="addCategory()">新增分類</button></div>';
+  html += '<div class="close-row" style="justify-content:space-between;">';
+  html += '<div><button class="small" onclick="exportDB()">匯出 Excel 備份</button> <button class="small" onclick="document.getElementById(\'importDBInput\').click()">匯入 Excel</button><input type="file" id="importDBInput" accept=".xlsx,.xls" style="display:none" onchange="importDB(event)"> <button class="small danger" onclick="restoreDefault()">還原預設資料庫</button></div>';
+  html += '<button class="primary" onclick="closeModal(); render();">完成</button>';
+  html += '</div>';
+  m.innerHTML = html;
+}
+function brandSelect(ci, brand){
+  const opts = [['','不指定(依銷售分店)']].concat(Object.keys(BRAND_MAP).map(k=>[k, BRAND_MAP[k]]));
+  let s = '<select onchange="setCategoryBrand(' + ci + ', this.value)" style="font-size:12px;padding:4px 6px;border:1px solid var(--gray-300);border-radius:6px;">';
+  opts.forEach(o=>{
+    s += '<option value="' + o[0] + '"' + (brand===o[0] || (!brand && !o[0]) ? ' selected' : '') + '>' + esc(o[1]) + '</option>';
+  });
+  s += '</select>';
+  return s;
+}
+function setCategoryBrand(ci, val){ db[ci].brand = val; saveDB(); }
+function toggleEditCollapse(){ editItemsExpanded = !editItemsExpanded; renderEditPanel(); }
+function escAttr(s){ return esc(s).replace(/"/g,'&quot;'); }
+function renameCategory(ci, val){ db[ci].category = val; saveDB(); }
+function moveCategory(ci, dir){
+  const target = ci + dir;
+  if (target < 0 || target >= db.length) return;
+  const tmp = db[ci]; db[ci] = db[target]; db[target] = tmp;
+  saveDB();
+  renderEditPanel();
+}
+function removeCategory(ci){ if(!confirm('確定要刪除這個分類嗎？')) return; db.splice(ci,1); saveDB(); renderEditPanel(); }
+function removeItem(ci, ii){ db[ci].items.splice(ii,1); saveDB(); renderEditPanel(); }
+function addItem(ci){
+  const codeEl = document.getElementById('newCode_' + ci);
+  const nameEl = document.getElementById('newName_' + ci);
+  const code = normCode(codeEl.value.trim());
+  const name = nameEl.value.trim();
+  if (!code || !name){ toast('請輸入商品碼與名稱'); return; }
+  db[ci].items.push({code, name});
+  saveDB();
+  renderEditPanel();
+}
+function addCategory(){
+  const el = document.getElementById('newCatName');
+  const name = el.value.trim();
+  if (!name){ toast('請輸入分類名稱'); return; }
+  db.push({category:name, items:[]});
+  saveDB();
+  renderEditPanel();
+}
+function sanitizeSheetName(name, used){
+  let s = String(name||'分類').replace(/[:\\\/\?\*\[\]]/g, '').trim();
+  if (!s) s = '分類';
+  if (s.length > 31) s = s.slice(0,31);
+  let base = s, i = 1;
+  while (used.has(s)){
+    const suffix = '_' + (++i);
+    s = base.slice(0, 31-suffix.length) + suffix;
+  }
+  used.add(s);
+  return s;
+}
+const BRAND_SHEET_NAME = '分類品牌設定';
+function exportDB(){
+  const wb = XLSX.utils.book_new();
+  const used = new Set();
+  db.forEach(cat=>{
+    const rows = [['商品碼','商品名稱']];
+    cat.items.forEach(it=>{ rows.push([it.code, it.name]); });
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    XLSX.utils.book_append_sheet(wb, ws, sanitizeSheetName(cat.category, used));
+  });
+  const brandRows = [['分類','歸屬品牌代碼','歸屬品牌名稱']];
+  db.forEach(cat=>{ brandRows.push([cat.category, cat.brand||'', cat.brand ? (BRAND_MAP[cat.brand]||cat.brand) : '不指定']); });
+  const brandWs = XLSX.utils.aoa_to_sheet(brandRows);
+  XLSX.utils.book_append_sheet(wb, brandWs, BRAND_SHEET_NAME);
+  const wbout = XLSX.write(wb, {bookType:'xlsx', type:'array'});
+  const blob = new Blob([wbout], {type:'application/octet-stream'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = '常贈送療程對照資料庫_' + new Date().toISOString().slice(0,10) + '.xlsx';
+  a.click();
+}
+function importDB(evt){
+  const file = evt.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e){
+    try{
+      const buf = new Uint8Array(e.target.result);
+      const wb = XLSX.read(buf, {type:'array'});
+      if (!wb.SheetNames.length) throw new Error('檔案內沒有任何分頁');
+      const brandMap = {};
+      if (wb.SheetNames.includes(BRAND_SHEET_NAME)){
+        const rows = XLSX.utils.sheet_to_json(wb.Sheets[BRAND_SHEET_NAME], {header:1, raw:true, defval:''});
+        rows.slice(1).forEach(row=>{
+          const cname = String(row[0]||'').trim();
+          const bcode = String(row[1]||'').trim();
+          if (cname) brandMap[cname] = bcode;
+        });
+      }
+      const newDb = wb.SheetNames.filter(sn=>sn!==BRAND_SHEET_NAME).map(sn=>{
+        const ws = wb.Sheets[sn];
+        const rows = XLSX.utils.sheet_to_json(ws, {header:1, raw:true, defval:''});
+        const items = [];
+        rows.slice(1).forEach(row=>{
+          const code = normCode(row[0]);
+          const name = String(row[1]||'').trim();
+          if (code && name) items.push({code, name});
+        });
+        return {category: sn, items, brand: brandMap[sn] || ''};
+      });
+      db = newDb;
+      saveDB();
+      renderEditPanel();
+      toast('已匯入對照資料庫');
+    }catch(err){ toast('匯入失敗：' + err.message); }
+  };
+  reader.readAsArrayBuffer(file);
+  evt.target.value = '';
+}
+function restoreDefault(){
+  if (!confirm('確定要還原成內建預設資料庫嗎？目前的編輯內容會被覆蓋。')) return;
+  db = JSON.parse(JSON.stringify(DEFAULT_DB));
+  saveDB();
+  renderEditPanel();
+}
+
+render();
+</script>
+</body>
+</html>
