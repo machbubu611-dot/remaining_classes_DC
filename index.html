@@ -124,13 +124,17 @@
   .add-item-row input{font-size:12px;padding:4px 8px;}
   .add-item-row input.code-input{width:90px;}
   .hint{font-size:12px;color:var(--gray-500);margin-top:4px;}
+  @page{ margin:14mm 12mm; }
   @media print{
     body{background:var(--white);}
     .no-print{display:none !important;}
     .wrap{max-width:100%;padding:0;}
-    .branch-block{page-break-inside:avoid;}
-    .cat-card{border:1px solid #ccc;}
-    table{border:1px solid #ccc;}
+    .cat-card{border:1px solid #ccc;break-inside:avoid;}
+    table{border:1px solid #ccc;border-radius:0;}
+    thead{display:table-header-group;}
+    tr{break-inside:avoid;}
+    .branch-title,.sub-title{break-after:avoid-page;}
+    .customer-card{break-inside:avoid;}
   }
 </style>
 </head>
@@ -377,17 +381,17 @@ function render(){
     html += '<div class="sub-section">';
     html += '<div class="sub-title"><div class="label">未歸類療程</div><div class="count">' + unmatched.length + ' 筆</div></div>';
     if (sortedUnmatched.length){
-      html += '<table><tr>';
+      html += '<table><thead><tr>';
       html += '<th style="width:14%">療程代碼</th>';
       html += '<th>療程名稱</th>';
       html += th('購買日期','purchaseDate',sortKey,'14%');
       html += th('使用期限','expiry',sortKey,'14%');
       html += '<th class="num" style="width:10%">剩餘數量</th>';
-      html += '</tr>';
+      html += '</tr></thead><tbody>';
       sortedUnmatched.forEach(it=>{
         html += '<tr><td class="muted-code">' + esc(it.productCode) + '</td><td>' + esc(it.productName) + '</td><td>' + esc(it.purchaseDate) + '</td><td>' + expiryCell(it.expiry) + '</td><td class="num">' + it.qty + ' ' + it.unit + '</td></tr>';
       });
-      html += '</table>';
+      html += '</tbody></table>';
     } else {
       html += '<div class="hint">此區塊沒有未歸類的療程</div>';
     }
@@ -411,11 +415,11 @@ function render(){
         rows.forEach(r=>{ totals[r.unit] = (totals[r.unit]||0) + r.qty; });
         const totalStr = Object.keys(totals).map(u=>totals[u]+' '+u).join(' · ');
         html += '<div class="cat-card"><div class="cat-card-head"><div class="cname">' + esc(cat) + '</div><div class="total">合計 ' + totalStr + '</div></div>';
-        html += '<table class="cat-table"><tr>' + th('購買日期','purchaseDate',catSortKey,'40%') + th('使用期限','expiry',catSortKey,'40%') + '<th class="num" style="width:20%">剩餘數量</th></tr>';
+        html += '<table class="cat-table"><thead><tr>' + th('購買日期','purchaseDate',catSortKey,'40%') + th('使用期限','expiry',catSortKey,'40%') + '<th class="num" style="width:20%">剩餘數量</th></tr></thead><tbody>';
         rows.forEach(r=>{
           html += '<tr><td>' + esc(r.purchaseDate) + '</td><td>' + expiryCell(r.expiry) + '</td><td class="num">' + r.qty + ' ' + r.unit + '</td></tr>';
         });
-        html += '</table>';
+        html += '</tbody></table>';
         html += '</div>';
       });
       html += '</div>';
