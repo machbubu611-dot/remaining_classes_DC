@@ -179,12 +179,20 @@ function loadDB(){
     if (raw){
       const storedVer = localStorage.getItem(DB_VERSION_KEY);
       if (storedVer !== DEFAULT_DB_VERSION){
-        setTimeout(()=>toast('提醒：內建對照資料庫已更新，若畫面上分類跟預期不同，請至「編輯對照資料庫」點擊「還原預設資料庫」'), 900);
+        const fresh = JSON.parse(JSON.stringify(DEFAULT_DB));
+        try{
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(fresh));
+          localStorage.setItem(DB_VERSION_KEY, DEFAULT_DB_VERSION);
+        }catch(e){}
+        setTimeout(()=>toast('對照資料庫已自動更新為最新版本'), 900);
+        return fresh;
       }
       return JSON.parse(raw);
     }
   }catch(e){}
-  return JSON.parse(JSON.stringify(DEFAULT_DB));
+  const fresh = JSON.parse(JSON.stringify(DEFAULT_DB));
+  try{ localStorage.setItem(DB_VERSION_KEY, DEFAULT_DB_VERSION); }catch(e){}
+  return fresh;
 }
 function saveDB(){
   try{
